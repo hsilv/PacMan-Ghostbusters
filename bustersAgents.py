@@ -11,7 +11,7 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
+from __builtin__ import enumerate, globals, len, range, float # type: ignore
 import util
 from game import Agent
 from game import Directions
@@ -74,7 +74,7 @@ class BustersAgent:
 
     def registerInitialState(self, gameState):
         "Initializes beliefs and inference modules"
-        import __main__
+        import __main__ # type: ignore
         self.display = __main__._display
         for inference in self.inferenceModules:
             inference.initialize(gameState)
@@ -163,4 +163,41 @@ class GreedyBustersAgent(BustersAgent):
             [beliefs for i, beliefs in enumerate(self.ghostBeliefs)
              if livingGhosts[i+1]]
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        
+        # Encontrar el numero de fantasmas vivos o fuera de la jaula
+        numGhosts = 0
+        for ghost in range(1, len(livingGhosts)):
+            if livingGhosts[ghost]:
+                numGhosts += 1
+        
+        # Si no hay fantasmas vivos, regresar STOP
+        toGo = Directions.STOP
+        minimum = float('inf')
+        
+        for move in gameState.getLegalPacmanActions():
+            successorPosition = Actions.getSuccessor(pacmanPosition, move)
+            for index in range(numGhosts):
+                
+                # Probabilidades y posicion del fantasma
+                ghostPosition = None
+                prob = 0
+                
+                # Obtener la distribucion del fantasma que se evalua actualmente
+                actualGhostDistribution = livingGhostPositionDistributions[index]
+                
+                # Encontrar la posicion mas probable del fantasma
+                for position in actualGhostDistribution.keys():
+                    if actualGhostDistribution[position] > prob:
+                        ghostPosition = position
+                        prob = actualGhostDistribution[position]
+                        
+                # Calcular la distancia entre pacman y el fantasma
+                ghostDistance = self.distancer.getDistance(successorPosition, ghostPosition)
+                
+                # Si la distancia es menor que la minima, actualizar la minima y la direccion a seguir
+                if ghostDistance < minimum:
+                    minimum = ghostDistance
+                    toGo = move
+        
+        return toGo

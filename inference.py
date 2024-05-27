@@ -12,7 +12,8 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import itertools
+from __builtin__ import enumerate, len, list, tuple, range, float # type: ignore
+import itertools # type: ignore
 import util
 import random
 import busters
@@ -154,8 +155,14 @@ class ExactInference(InferenceModule):
         # Be sure to handle the "jail" edge case where the ghost is eaten
         # and noisyDistance is None
         allPossible = util.Counter()
+        
+        # Para cada posicion legal
         for p in self.legalPositions:
+            
+            # Calcular la distancia real
             trueDistance = util.manhattanDistance(p, pacmanPosition)
+            
+            # Si la distancia existe en el modelo de emision
             if emissionModel[trueDistance] > 0:
                 # Si la distancia existe, entonces se actualiza la probabilidad
                 allPossible[p] = emissionModel[trueDistance] * self.beliefs[p]
@@ -274,6 +281,27 @@ class ParticleFilter(InferenceModule):
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+        
+        # Inicializar la lista de particulas en la clase
+        self.particles = []
+        
+        # Inicializar el numero de particulas
+        particles = 0
+        
+        # Mientras el numero de particulas sea menor al numero de particulas actual
+        while particles < self.numParticles:
+            
+            # Para cada posicion legal
+            for position in self.legalPositions:
+                
+                # Si el numero de particulas es menor al numero de particulas actual
+                if particles < self.numParticles:
+                    
+                    # Agregar la posicion a la lista de particulas
+                    self.particles.append(position)
+                    
+                    # Aumentar el numero de particulas
+                    particles +=  1
 
     def observe(self, observation, gameState):
         """
@@ -306,7 +334,45 @@ class ParticleFilter(InferenceModule):
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        
+        # Si la distancia es nula, entonces el fantasma fue capturado
+        if noisyDistance is None:
+            # Actualizar las particulas a la posicion de la carcel
+            self.particles = [self.getJailPosition()] * self.numParticles
+
+        # Si no, entonces actualizar las particulas segun la distancia
+        else:
+            
+            # Inicializar las creencias actualizadas
+            updatedBeliefs = util.Counter()
+
+            # Para cada particula en la lista de particulas
+            for particle in self.particles:
+                
+                # Calcular la distancia real
+                trueDistance = util.manhattanDistance(pacmanPosition, particle)
+                
+                # Si la distancia real existe en el modelo de emision
+                if emissionModel[trueDistance] > 0:
+                    
+                    # Actualizar la probabilidad de la particula
+                    updatedBeliefs[particle] += emissionModel[trueDistance]
+
+            # Si el total de las creencias actualizadas es 0
+            if updatedBeliefs.totalCount() == 0:
+                
+                # Inicializar las particulas uniformemente
+                self.initializeUniformly(gameState)
+            else:
+                
+                # Normalizar las creencias actualizadas
+                updatedBeliefs.normalize()
+                
+                # Actualizar las particulas segun las creencias actualizadas
+                self.particles = [util.sample(updatedBeliefs) for _ in range(self.numParticles)]
+                
+        
 
     def elapseTime(self, gameState):
         """
@@ -323,6 +389,7 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
+        
         util.raiseNotDefined()
 
     def getBeliefDistribution(self):
@@ -333,7 +400,21 @@ class ParticleFilter(InferenceModule):
         Counter object)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        
+        # Inicializar la distribucion de creencias
+        distribution = util.Counter()
+        
+        # Para cada particula en la lista de particulas
+        for particle in self.particles:
+            # Aumentar la probabilidad de la particula (las posibles)
+            distribution[particle] += 1
+            
+        # Normalizar la distribucion
+        distribution.normalize()
+        
+        # Retornar la distribucion
+        return distribution
 
 class MarginalInference(InferenceModule):
     """
